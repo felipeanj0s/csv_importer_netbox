@@ -1,0 +1,22 @@
+name,device,label,enabled,type,description
+ge-0/0/0,JPA,,True,10gbase-x-xfp,JPA-1|10G|Interface fisica
+ge-0/0/0.3000,JPA,,True,virtual,JPA-1 - PB|CORE|10G
+ge-0/0/1,JPA,,True,10gbase-x-xfp,JPA-1|10G|Interface fisica
+ge-0/0/1.3000,JPA,,True,virtual,JPA-1 - PE-1|CORE|10G
+lo0,JPA,,True,virtual,
+lo0.0,JPA,,True,virtual,JPA-1 - Loopback
+lo0.3,JPA,,True,virtual,Loopback|VRF para ping tuneis MPLS
+lo0.20,JPA,,True,virtual,Loopback|VRF_FlowSpec
+ge-0/0/0,PB,,True,10gbase-x-xfp,PB|10G|Interface fisica
+ge-0/0/0.3000,PB,,True,virtual,PB-1 - JPA-1|CORE|10G
+ge-0/0/1,PB,,True,100gbase-x-qsfp28,PB|100G|Interface fisica
+ge-0/0/1.3000,PB,,True,virtual,PB - PE|CORE|100G
+ge.0,PB,,True,virtual,PB-1 - Loopback
+lo0.3,PB,,True,virtual,Loopback|VRF para ping tuneis MPLS
+lo0.20,PB,,True,virtual,Loopback|VRF_FlowSpec
+ge-0/0/0.0,PE,,True,10gbase-x-xfp,PE-1|10G|Interface fisica
+ge-0/0/0.3000,PE,,True,virtual,PE-1 - JPA-1|CORE|10G
+ge-0/0/1,PE,,True,100gbase-x-qsfp28,PE|100G|Interface fisica
+ge-0/0/1.3000,PE,,True,virtual,PE - PB|CORE|100G
+lo0.0,PE,,True,virtual,PE-1 - Loopback
+lo0.3,PE,,True,virtual,Loopback|VRF para ping tuneis MPLS

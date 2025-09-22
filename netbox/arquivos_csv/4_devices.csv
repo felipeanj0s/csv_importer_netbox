@@ -1,0 +1,4 @@
+name,status,device_role,manufacturer,device_type,site,platform
+JPA,active,Core,Juniper,MX,PA-PB,junos
+PB,active,Core,Juniper,MX,PoP-PB,junos
+PE,active,Core,Juniper,MX,PoP-PE,junos

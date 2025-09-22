@@ -1,0 +1,4 @@
+cid,provider,type,status,Tenant,Description
+R-301385,CHESF,DWDM,active,Backbone,PB - PE 100G CHESF
+O-40332578,MOB,DWDM,active,Backbone,PB - PB 100G MOB
+O-40414995,WIRELINK,DWDM,active,Backbone,PB - PE 10G WIRELINK

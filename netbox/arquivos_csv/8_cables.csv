@@ -1,0 +1,7 @@
+side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,status
+,circuits.circuittermination,R-301385: Termination A,PB,dcim.interface,et-0/1/8,connected
+,circuits.circuittermination,R-301385: Termination Z,PE,dcim.interface,et-1/1/5,connected
+,circuits.circuittermination,O-40332578: Termination A,PB,dcim.interface,xe-0/0/0:2,connected
+,circuits.circuittermination,O-40332578: Termination Z,JPA,dcim.interface,xe-0/1/6,connected
+,circuits.circuittermination,O-40414995: Termination A,JPA,dcim.interface,xe-0/1/7,connected
+,circuits.circuittermination,O-40414995: Termination Z,PE,dcim.interface,xe-0/0/0:3.0,connected

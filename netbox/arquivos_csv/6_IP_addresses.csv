@@ -1,0 +1,25 @@
+address,vrf,tenant,status,role,device,interface,description
+10.79.212.22/32,Global-RNP,RNP,active,loopback,JPA,lo0.0,cjpa1.bkb.rnp.br.,#40354389 - Loopback JPA-1 - CORE
+10.79.212.28/32,Global-RNP,Backbone,active,loopback,PB,lo0.0,cpb1.bkb.rnp.br.,PB-1 - Loopback
+10.79.212.30/32,Global-RNP,Backbone,active,loopback,PE,lo0.0,cpe1.bkb.rnp.br.,loopback-core-pe-1
+10.79.212.81/32,Global-RNP,Backbone,active,loopback,PB,lo0.3,cpb1-rpm.bkb.rnp.br.,Loopback|VRF para ping tuneis MPLS
+10.79.212.90/32,Global,Backbone,active,loopback,PE,lo0.3,,Loopback RPM CPE1
+10.79.212.90/26,Global-RNP,Backbone,active,loopback,PE,lo0.3,cpe1-rpm.bkb.rnp.br.,Endereço Loopback de RPM - CPE1
+10.79.212.106/32,Global-RNP,Backbone,active,loopback,JPA,lo0.3,cjpa1-rpm.bkb.rnp.br.,
+10.79.213.8/31,Global-RNP,RNP,active,,PE,ge-0/0/1.3000,,PE-PB
+10.79.213.9/31,Global-RNP,RNP,active,,PB,0/0/1.3000,,PB-PE
+10.79.213.98/31,Global-RNP,Backbone,active,,JPA,ge-0/0/0.3000,,JPA-PB
+10.79.213.99/31,Global-RNP,RNP,active,,PB,ge-0/0/0.3000,,PB-JPA
+10.79.213.168/31,Global-RNP,,active,,JPA,ge-0/0/1.3000,,JPA-PE
+10.79.213.169/31,Global-RNP,,active,,PE,ge-0/0/0.3000,,PE-JPA
+172.16.20.40/32,Global,RNP,active,,JPA,lo0.20,,
+172.16.20.49/32,Global-RNP,,active,,PB,lo0.20,,
+fc00:12f0:ffff:0:101:81:212:30/128,Global-RNP,Backbone,active,loopback,PE,lo0.0,cpe1.ceo.rnp.br,loopback-core-pe-1
+fc00:12f0:ffff:0:101:83:212:22/128,Global-RNP,RNP,active,,JPA,lo0.0,,
+fc00:12f0:ffff:0:101:83:212:28/128,Global-RNP,Backbone,active,loopback,PB,lo0.0,cpb1.bkb.rnp.br.,PB-1 - Loopback
+fc00:12f0:ffff:0:201:0:203:8/127,Global-RNP,RNP,active,,PE,ge-0/0/1.3000,,PE-PB
+fc00:12f0:ffff:0:201:0:203:9/127,Global-RNP,RNP,active,,PB,ge-0/0/1.3000,,PB-PE
+fc00:12f0:ffff:0:201:0:213:98/127,Global-RNP,Backbone,active,,JPA,ge-0/0/0.3000,,JPA-PB
+fc00:12f0:ffff:0:201:0:213:99/127,Global,Backbone,active,,PB,ge-0/0/0.3000,,PB-JPA
+fc00:12f0:ffff:0:201:0:213:168/127,Global-RNP,,active,,JPA,ge-0/0/0.3000,,JPA-PE
+fc00:12f0:ffff:0:201:0:213:169/127,Global-RNP,,active,,PE,xe-0/0/3:0.3000,,PE-JPA
