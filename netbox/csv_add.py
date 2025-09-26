@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-NetBox CSV Importer — Mini (simples & didático)
+NetBox CSV Importer — Mini (csv_add.py)
 
 Fluxo:
   1) Vasculha a pasta por CSVs (ordem 1..7 opcional).
@@ -11,9 +11,9 @@ Fluxo:
   5) Cria ou atualiza registros (devices: name+site; ip addresses: address+vrf).
 
 Uso:
-  python3 nb_csv_importer_mini.py ./netbox/arquivos_csv --ip-upsert
+  python3 csv_add.py ./netbox/arquivos_csv --ip-upsert
 
-CSV mínimos:
+CSV mínimos de exemplo:
 
 (1) 4_devices.csv
 name,site,role,device_type,manufacturer,platform,serial
@@ -27,26 +27,86 @@ Observações:
 - "site", "tenant", "vrf" podem ser NOME (string) ou ID.
 - "device_type" pode ser NOME do modelo; se fabricante vier, melhor.
 - Para criar um device o NetBox exige: site, role, device_type (ids ou objetos resolvidos).
+
+Este script tenta instalar automaticamente dependências ausentes (pynetbox e, se existir .env, python-dotenv).
 """
+
+from __future__ import annotations
 
 import argparse
 import csv
+import os
 import pathlib
 import re
 import sys
+import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 
-import pynetbox
-from pynetbox.core.query import RequestError
+# ========================= bootstrap de dependências ==========================
+REQUIRED_PACKAGES = ["pynetbox>=7.5.0"]
+OPTIONAL_PACKAGES = ["python-dotenv>=1.0.0"]  # só é carregado se existir .env
 
-# ====== CONFIGURE AQUI =========================================================
-NETBOX_URL   = "http://192.168.0.222:8000"
-NETBOX_TOKEN = "0bcd479997b36d42edea7509a4c86043ee52a3d7"
-# ==============================================================================
+def _pip_install(pkgs: List[str]) -> None:
+    """Instala pacotes via pip no mesmo intérprete."""
+    if not pkgs:
+        return
+    cmd = [sys.executable, "-m", "pip", "install", "--no-input", "--no-cache-dir", *pkgs]
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[ERRO] Falha instalando pacotes {pkgs}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def _ensure_deps() -> None:
+    try:
+        import importlib.util as _iu  # noqa
+        missing = []
+        if _iu.find_spec("pynetbox") is None:
+            missing.append(REQUIRED_PACKAGES[0])
+        # dotenv só se existir .env
+        if (pathlib.Path(".env").exists() or pathlib.Path("./netbox/.env").exists()):
+            if _iu.find_spec("dotenv") is None:
+                missing.append(OPTIONAL_PACKAGES[0])
+        if missing:
+            print(f"[INFO] Instalando dependências: {', '.join(missing)}")
+            _pip_install(missing)
+    except Exception as e:
+        print(f"[ALERTA] Não foi possível verificar/instalar dependências automaticamente: {e}", file=sys.stderr)
+
+_ensure_deps()
+
+# imports após garantir dependências
+import pynetbox  # type: ignore
+from pynetbox.core.query import RequestError  # type: ignore
+
+try:
+    from dotenv import load_dotenv  # type: ignore
+except Exception:
+    load_dotenv = None
+
+# ============================== configuração =================================
+# Lê das variáveis de ambiente; se não houver, usa os defaults abaixo
+NETBOX_URL_DEFAULT   = "http://192.168.0.88:8000"
+NETBOX_TOKEN_DEFAULT = "7fa821d37d939f537349df6381e22aaff8babe22"
+
+NETBOX_URL   = os.getenv("NETBOX_URL", NETBOX_URL_DEFAULT)
+NETBOX_TOKEN = os.getenv("NETBOX_TOKEN", NETBOX_TOKEN_DEFAULT)
+
+# Se existir arquivo .env na raiz ou em ./netbox, carrega antes de fixar valores
+def _load_dotenv_if_any() -> None:
+    global NETBOX_URL, NETBOX_TOKEN
+    if load_dotenv:
+        for candidate in (pathlib.Path(".env"), pathlib.Path("./netbox/.env")):
+            if candidate.exists():
+                load_dotenv(dotenv_path=candidate)
+        NETBOX_URL   = os.getenv("NETBOX_URL", NETBOX_URL)
+        NETBOX_TOKEN = os.getenv("NETBOX_TOKEN", NETBOX_TOKEN)
+
+_load_dotenv_if_any()
 
 # Nome do arquivo -> endpoint do NetBox
 # (o script remove prefixos numéricos como "1_", "2_" e converte para minúsculas)
-NAME2EP = {
+NAME2EP: Dict[str, str] = {
     "manufacturers":    "dcim.manufacturers",      # 1_manufacturers.csv
     "platforms":        "dcim.platforms",          # 2_platforms.csv
     "device_roles":     "dcim.device_roles",       # 3_device_roles.csv
@@ -64,7 +124,7 @@ NAME2EP = {
 }
 
 # Campos que são referências (aceitam id ou {"name": ...})
-REF_FIELDS = {
+REF_FIELDS: Dict[str, List[str]] = {
     "dcim.devices":       ["role", "platform", "site", "tenant", "location", "rack"],
     "dcim.platforms":     ["manufacturer"],
     "dcim.device_types":  ["manufacturer"],
@@ -74,12 +134,12 @@ REF_FIELDS = {
 }
 
 # Campos inteiros
-INT_FIELDS = {
+INT_FIELDS: Dict[str, List[str]] = {
     "dcim.device_types": ["u_height", "weight", "airflow"],
     "dcim.interfaces":   ["speed", "mtu"],
 }
 
-# -------------------- utilitários --------------------
+# ================================ utilitários ================================
 
 def norm(s: str) -> str:
     return re.sub(r"\s+", "_", s.strip().lower())
@@ -101,7 +161,7 @@ def to_ref(v: Any) -> Any:
     return v
 
 def clean_row(row: Dict[str, Any]) -> Dict[str, Any]:
-    out = {}
+    out: Dict[str, Any] = {}
     for k, v in row.items():
         if isinstance(v, str):
             v = v.strip()
@@ -127,7 +187,7 @@ def is_dup_error(e: RequestError) -> bool:
     t = dup_err_text(e.error)
     return ("already exists" in t) or ("must be unique" in t) or ("duplicate ip address" in t)
 
-# -------------------- resoluções simples --------------------
+# ============================= resoluções simples ============================
 
 def res_site_id(nb, name: str) -> Optional[int]:
     obj = nb.dcim.sites.get(name=name)
@@ -161,7 +221,7 @@ def res_vrf_id(nb, vrf_name: str, tenant_name: Optional[str]) -> Optional[int]:
             return matches[0].id
     return None
 
-# -------------------- transformação por endpoint --------------------
+# ===================== transformação por endpoint/objeto =====================
 
 def transform_row(nb, ep: str, r: Dict[str, Any]) -> Dict[str, Any]:
     r = dict(r)  # cópia
@@ -206,7 +266,7 @@ def transform_row(nb, ep: str, r: Dict[str, Any]) -> Dict[str, Any]:
 
     return r
 
-# -------------------- operações (create / update) --------------------
+# ======================== operações (create / update) ========================
 
 def upsert_device(nb, row: Dict[str, Any]) -> str:
     """Devices: match por (name + site). Se existir → update parcial; senão → create."""
@@ -259,7 +319,7 @@ def upsert_ip(endpoint, row: Dict[str, Any]) -> str:
     except RequestError as e:
         return "skipped" if is_dup_error(e) else "error"
 
-# -------------------- descoberta de CSVs e roteamento --------------------
+# ======================= descoberta de CSVs e roteamento ======================
 
 def detect_endpoint(relname: str) -> Optional[str]:
     """
@@ -291,7 +351,7 @@ def get_endpoint_object(nb, ep_path: str):
     mod, attr = ep_path.split(".", 1)
     return getattr(getattr(nb, mod), attr)
 
-# -------------------- execução --------------------
+# ================================= execução ==================================
 
 def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tuple[int, int, int, int]:
     endpoint = get_endpoint_object(nb, ep)
@@ -317,7 +377,7 @@ def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tu
 
     return created, updated, skipped, errors
 
-def run(nb, base: pathlib.Path, ip_upsert: bool):
+def run(nb, base: pathlib.Path, ip_upsert: bool) -> None:
     items = collect_csvs(base)
     if not items:
         print("Nenhum CSV encontrado."); return
@@ -346,7 +406,16 @@ def run(nb, base: pathlib.Path, ip_upsert: bool):
         if e: tail += f" erros={e}"
         print(f"   → {tail}")
 
-def main():
+def _check_conn_or_exit(nb) -> None:
+    """Valida conexão/permite erro claro antes de processar."""
+    try:
+        # chamada leve para validar token/URL
+        _ = nb.dcim.sites.count()
+    except Exception as e:
+        print(f"[ERRO] Falha ao conectar no NetBox ({NETBOX_URL}). Verifique URL/TOKEN. Detalhes: {e}", file=sys.stderr)
+        sys.exit(2)
+
+def main() -> None:
     ap = argparse.ArgumentParser(description="NetBox CSV Importer — Mini")
     ap.add_argument("base_dir", help="Pasta com os CSVs (ex.: ./netbox/arquivos_csv)")
     ap.add_argument("--ip-upsert", action="store_true", help="Atualiza IPs existentes (address [+ vrf])")
@@ -357,7 +426,13 @@ def main():
         print(f"Pasta não encontrada: {base}")
         sys.exit(1)
 
+    if not NETBOX_URL or not NETBOX_TOKEN:
+        print("[ERRO] Defina NETBOX_URL e NETBOX_TOKEN (variáveis de ambiente ou .env).", file=sys.stderr)
+        sys.exit(1)
+
     nb = pynetbox.api(NETBOX_URL, token=NETBOX_TOKEN)
+    _check_conn_or_exit(nb)
+
     print(f"Processando pasta: {base}")
     run(nb, base, args.ip_upsert)
 

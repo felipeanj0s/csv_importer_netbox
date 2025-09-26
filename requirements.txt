@@ -1,2 +1,3 @@
-pynetbox
-pynetbox.core.query
+pynetbox==7.5.0
+# opcional, só se você pretende usar .env:
+python-dotenv>=1.0.0
