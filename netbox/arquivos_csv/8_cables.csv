@@ -1,7 +1,31 @@
-side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,status
-,circuits.circuittermination,R-301385: Termination A,PB,dcim.interface,et-0/1/8,connected
-,circuits.circuittermination,R-301385: Termination Z,PE,dcim.interface,et-1/1/5,connected
-,circuits.circuittermination,O-40332578: Termination A,PB,dcim.interface,xe-0/0/0:2,connected
-,circuits.circuittermination,O-40332578: Termination Z,JPA,dcim.interface,xe-0/1/6,connected
-,circuits.circuittermination,O-40414995: Termination A,JPA,dcim.interface,xe-0/1/7,connected
-,circuits.circuittermination,O-40414995: Termination Z,PE,dcim.interface,xe-0/0/0:3.0,connected
+side_a_device,side_a_type,side_a_name,side_b_device,side_b_type,side_b_name,label,description,tags
+RNP-CE,dcim.interface,1/1,RG02-EMBRAPA,dcim.interface,1/1,RNP-CE↔RG02-EMBRAPA,Tronco 10G,
+RNP-CE,dcim.interface,1/2,RG03-UECE - Itaperi,dcim.interface,1/1,RNP-CE↔RG03-UECE Itaperi,Tronco 10G,
+RNP-CE,dcim.interface,1/3,RG04-FUNCAP,dcim.interface,1/1,RNP-CE↔RG04-FUNCAP,Tronco 10G,
+RNP-CE,dcim.interface,1/4,RG07-UNIFOR,dcim.interface,1/1,RNP-CE↔RG07-UNIFOR,Tronco 10G,
+RNP-CE,dcim.interface,1/5,RG09-HGF,dcim.interface,1/1,RNP-CE↔RG09-HGF,Tronco 10G,
+RNP-CE,dcim.interface,1/6,RG12-FUNCEME,dcim.interface,1/1,RNP-CE↔RG12-FUNCEME,Tronco 10G,
+RNP-CE,dcim.interface,1/7,RG13-IFCE-Polo de Inovação,dcim.interface,1/1,RNP-CE↔RG13-IFCE Polo,Tronco 10G,
+RNP-CE,dcim.interface,1/8,RG15-UECE-Benfica,dcim.interface,1/1,RNP-CE↔RG15-UECE Benfica,Tronco 10G,
+RNP-CE,dcim.interface,1/9,RG16-IFCE-Fortaleza,dcim.interface,1/1,RNP-CE↔RG16-IFCE Fortaleza,Tronco 10G,
+RNP-CE,dcim.interface,1/10,RG21-ICC,dcim.interface,1/1,RNP-CE↔RG21-ICC,Tronco 10G,
+RNP-CE,dcim.interface,1/11,RG24-HUWC,dcim.interface,1/1,RNP-CE↔RG24-HUWC,Tronco 10G,
+RNP-CE,dcim.interface,1/12,RG25-MEAC,dcim.interface,1/1,RNP-CE↔RG25-MEAC,Tronco 10G,
+RNP-CE,dcim.interface,1/13,RG26-IFCE-Reitoria,dcim.interface,1/1,RNP-CE↔RG26-IFCE Reitoria,Tronco 10G,
+RNP-CE,dcim.interface,1/14,RG27-SARAH,dcim.interface,1/1,RNP-CE↔RG27-SARAH,Tronco 10G,
+RNP-CE,dcim.interface,1/15,RG28-ROEN,dcim.interface,1/1,RNP-CE↔RG28-ROEN,Tronco 10G,
+RNP-CE,dcim.interface,1/16,RG29-FIOCRUZ,dcim.interface,1/1,RNP-CE↔RG29-FIOCRUZ,Tronco 10G,
+RUTE-HUB,dcim.interface,1/1,RUTE01-HIAS,dcim.interface,1/1,RUTE-HUB↔RUTE01-HIAS,Link RUTE,
+RUTE-HUB,dcim.interface,1/2,RUTE03-HGCC,dcim.interface,1/1,RUTE-HUB↔RUTE03-HGCC,Link RUTE,
+RUTE-HUB,dcim.interface,1/3,RUTE04-HSJDI,dcim.interface,1/1,RUTE-HUB↔RUTE04-HSJDI,Link RUTE,
+RUTE-HUB,dcim.interface,1/4,RUTE05-IJF,dcim.interface,1/1,RUTE-HUB↔RUTE05-IJF,Link RUTE,
+RUTE-HUB,dcim.interface,1/5,RG09-HGF,dcim.interface,1/1,RUTE-HUB↔RG09-HGF,Backhaul,
+RUTE-HUB,dcim.interface,1/6,RG07-UNIFOR,dcim.interface,1/1,RUTE-HUB↔RG07-UNIFOR,Backhaul,
+RUTE-HUB,dcim.interface,1/7,RG26-IFCE-Reitoria,dcim.interface,1/1,RUTE-HUB↔RG26-IFCE-Reitoria,Backhaul,
+UFC-Reitoria,dcim.interface,1/1,UFC-Saude,dcim.interface,1/1,UFC-Reitoria↔UFC-Saude,Anel UFC,
+UFC-Saude,dcim.interface,1/2,UFC-FEAAC,dcim.interface,1/1,UFC-Saude↔UFC-FEAAC,Anel UFC,
+UFC-FEAAC,dcim.interface,1/2,UFC-Direito,dcim.interface,1/1,UFC-FEAAC↔UFC-Direito,Anel UFC,
+UFC-Direito,dcim.interface,1/2,UFC-CJA,dcim.interface,1/1,UFC-Direito↔UFC-CJA,Anel UFC,
+UFC-CJA,dcim.interface,1/2,UFC-Pici,dcim.interface,1/1,UFC-CJA↔UFC-Pici,Anel UFC,
+UFC-Pici,dcim.interface,1/2,UFC-Labomar,dcim.interface,1/1,UFC-Pici↔UFC-Labomar,Anel UFC,
+UFC-Labomar,dcim.interface,1/2,UFC-Reitoria,dcim.interface,1/2,UFC-Labomar↔UFC-Reitoria,Anel UFC,

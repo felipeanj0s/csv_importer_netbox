@@ -1,25 +1,24 @@
 address,vrf,tenant,status,role,device,interface,description
-10.79.212.22/32,Global-RNP,RNP,active,loopback,JPA,lo0.0,cjpa1.bkb.rnp.br.,#40354389 - Loopback JPA-1 - CORE
-10.79.212.28/32,Global-RNP,Backbone,active,loopback,PB,lo0.0,cpb1.bkb.rnp.br.,PB-1 - Loopback
-10.79.212.30/32,Global-RNP,Backbone,active,loopback,PE,lo0.0,cpe1.bkb.rnp.br.,loopback-core-pe-1
-10.79.212.81/32,Global-RNP,Backbone,active,loopback,PB,lo0.3,cpb1-rpm.bkb.rnp.br.,Loopback|VRF para ping tuneis MPLS
-10.79.212.90/32,Global,Backbone,active,loopback,PE,lo0.3,,Loopback RPM CPE1
-10.79.212.90/26,Global-RNP,Backbone,active,loopback,PE,lo0.3,cpe1-rpm.bkb.rnp.br.,Endereço Loopback de RPM - CPE1
-10.79.212.106/32,Global-RNP,Backbone,active,loopback,JPA,lo0.3,cjpa1-rpm.bkb.rnp.br.,
-10.79.213.8/31,Global-RNP,RNP,active,,PE,ge-0/0/1.3000,,PE-PB
-10.79.213.9/31,Global-RNP,RNP,active,,PB,0/0/1.3000,,PB-PE
-10.79.213.98/31,Global-RNP,Backbone,active,,JPA,ge-0/0/0.3000,,JPA-PB
-10.79.213.99/31,Global-RNP,RNP,active,,PB,ge-0/0/0.3000,,PB-JPA
-10.79.213.168/31,Global-RNP,,active,,JPA,ge-0/0/1.3000,,JPA-PE
-10.79.213.169/31,Global-RNP,,active,,PE,ge-0/0/0.3000,,PE-JPA
-172.16.20.40/32,Global,RNP,active,,JPA,lo0.20,,
-172.16.20.49/32,Global-RNP,,active,,PB,lo0.20,,
-fc00:12f0:ffff:0:101:81:212:30/128,Global-RNP,Backbone,active,loopback,PE,lo0.0,cpe1.ceo.rnp.br,loopback-core-pe-1
-fc00:12f0:ffff:0:101:83:212:22/128,Global-RNP,RNP,active,,JPA,lo0.0,,
-fc00:12f0:ffff:0:101:83:212:28/128,Global-RNP,Backbone,active,loopback,PB,lo0.0,cpb1.bkb.rnp.br.,PB-1 - Loopback
-fc00:12f0:ffff:0:201:0:203:8/127,Global-RNP,RNP,active,,PE,ge-0/0/1.3000,,PE-PB
-fc00:12f0:ffff:0:201:0:203:9/127,Global-RNP,RNP,active,,PB,ge-0/0/1.3000,,PB-PE
-fc00:12f0:ffff:0:201:0:213:98/127,Global-RNP,Backbone,active,,JPA,ge-0/0/0.3000,,JPA-PB
-fc00:12f0:ffff:0:201:0:213:99/127,Global,Backbone,active,,PB,ge-0/0/0.3000,,PB-JPA
-fc00:12f0:ffff:0:201:0:213:168/127,Global-RNP,,active,,JPA,ge-0/0/0.3000,,JPA-PE
-fc00:12f0:ffff:0:201:0:213:169/127,Global-RNP,,active,,PE,xe-0/0/3:0.3000,,PE-JPA
+10.11.11.2/32,,RG02-EMBRAPA,active,,RG02-EMBRAPA,mgmt,RG02-EMBRAPA gestão
+10.11.11.3/32,,RG03-UECE - Itaperi,active,,RG03-UECE - Itaperi,mgmt,RG03-UECE - Itaperi gestão
+10.111.111.13/32,,RG04-FUNCAP,active,,RG04-FUNCAP,mgmt,RG04-FUNCAP gestão
+10.11.11.7/32,,RG07-UNIFOR,active,,RG07-UNIFOR,mgmt,RG07-UNIFOR gestão
+10.111.111.33/32,,RG09-HGF,active,,RG09-HGF,mgmt,RG09-HGF gestão
+10.11.11.107/32,,RG107-UNIFOR,active,,RG107-UNIFOR,mgmt,RG107-UNIFOR gestão
+10.111.111.45/32,,RG12-FUNCEME,active,,RG12-FUNCEME,mgmt,RG12-FUNCEME gestão
+10.110.26.1/32,,RG126-IFCE - Reitoria,active,,RG126-IFCE - Reitoria,mgmt,RG126-IFCE - Reitoria gestão
+10.111.111.49/32,,RG13-IFCE-Polo de Inovação,active,,RG13-IFCE-Polo de Inovação,mgmt,RG13-IFCE-Polo de Inovação gestão
+10.11.11.15/32,,RG15-UECE-Benfica,active,,RG15-UECE-Benfica,mgmt,RG15-UECE-Benfica gestão
+10.11.11.16/32,,RG16-IFCE-Fortaleza,active,,RG16-IFCE-Fortaleza,mgmt,RG16-IFCE-Fortaleza gestão
+10.11.11.21/32,,RG21-ICC,active,,RG21-ICC,mgmt,RG21-ICC gestão
+10.11.11.24/32,,RG24-HUWC,active,,RG24-HUWC,mgmt,RG24-HUWC gestão
+10.11.11.25/32,,RG25-MEAC,active,,RG25-MEAC,mgmt,RG25-MEAC gestão
+10.11.11.26/32,,RG26-IFCE-Reitoria,active,,RG26-IFCE-Reitoria,mgmt,RG26-IFCE-Reitoria gestão
+10.11.11.27/32,,RG27-SARAH,active,,RG27-SARAH,mgmt,RG27-SARAH gestão
+10.11.11.28/32,,RG28-ROEN,active,,RG28-ROEN,mgmt,RG28-ROEN gestão
+200.129.0.3/32,,RG29-FIOCRUZ,active,,RG29-FIOCRUZ,mgmt,RG29-FIOCRUZ gestão
+200.129.32.2/32,,,active,,RUTE01-HIAS,mgmt,RUTE01-HIAS gestão
+200.129.32.34/32,,,active,,RUTE03-HGCC,mgmt,RUTE03-HGCC gestão
+200.129.32.50/32,,,active,,RUTE04-HSJDI,mgmt,RUTE04-HSJDI gestão
+200.129.32.66/32,,,active,,RUTE05-IJF,mgmt,RUTE05-IJF gestão
+200.129.32.18/32,,,disabled,,RUTE02-HM,mgmt,RUTE02-HM gestão

@@ -1,2 +1,13 @@
-model,manufacturer,u_height,slug
-MX,Juniper,1,mx
+manufacturer,model,slug,u_height
+Juniper,MX,mx,1
+Juniper,SRX,srx,3
+Juniper,EX,ex,1
+Huawei,6730,huawei-6730,2
+Huawei,5731,huawei-5731,2
+Huawei,NE8000,ne8000,2
+Cisco,Nexus 9000,nexus-9000,1
+Cisco,Catalyst 9000,catalyst-9000,1
+Arista,Arista 7050,arista-7050,1
+Dell,Dell S-Series,dell-s-series,1
+MikroTik,EdgeRouter,edgerouter,1
+Extreme,Summit 450,summit-450,1

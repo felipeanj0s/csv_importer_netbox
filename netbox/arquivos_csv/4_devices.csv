@@ -1,4 +1,33 @@
 name,status,device_role,manufacturer,device_type,site,platform
-JPA,active,Core,Juniper,MX,PA-PB,junos
-PB,active,Core,Juniper,MX,PoP-PB,junos
-PE,active,Core,Juniper,MX,PoP-PE,junos
+RG02-EMBRAPA,active,S_Access,Extreme,Summit 450,RG02-EMBRAPA,exos
+RG03-UECE - Itaperi,active,S_Access,Extreme,Summit 450,RG03-UECE - Itaperi,exos
+RG04-FUNCAP,active,S_Access,Extreme,Summit 450,RG04-FUNCAP,exos
+RG07-UNIFOR,active,S_Access,Extreme,Summit 450,RG07-UNIFOR,exos
+RG09-HGF,active,S_Access,Extreme,Summit 450,RG09-HGF,exos
+RG107-UNIFOR,active,S_Access,Extreme,Summit 450,RG107-UNIFOR,exos
+RG12-FUNCEME,active,S_Access,Extreme,Summit 450,RG12-FUNCEME,exos
+RG126-IFCE - Reitoria,active,S_Access,Extreme,Summit 450,RG126-IFCE - Reitoria,exos
+RG13-IFCE-Polo de Inovação,active,S_Access,Extreme,Summit 450,RG13-IFCE-Polo de Inovação,exos
+RG15-UECE-Benfica,active,S_Access,Extreme,Summit 450,RG15-UECE-Benfica,exos
+RG16-IFCE-Fortaleza,active,S_Access,Extreme,Summit 450,RG16-IFCE-Fortaleza,exos
+RG21-ICC,active,S_Access,Extreme,Summit 450,RG21-ICC,exos
+RG24-HUWC,active,S_Access,Extreme,Summit 450,RG24-HUWC,exos
+RG25-MEAC,active,S_Access,Extreme,Summit 450,RG25-MEAC,exos
+RG26-IFCE-Reitoria,active,S_Access,Extreme,Summit 450,RG26-IFCE-Reitoria,exos
+RG27-SARAH,active,S_Access,Extreme,Summit 450,RG27-SARAH,exos
+RG28-ROEN,active,S_Access,Extreme,Summit 450,RG28-ROEN,exos
+RG29-FIOCRUZ,active,S_Access,Extreme,Summit 450,RG29-FIOCRUZ,exos
+RNP-CE,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE-HUB,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE01-HIAS,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE03-HGCC,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE04-HSJDI,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE05-IJF,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+RUTE02-HM,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-Reitoria,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-Saude,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-FEAAC,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-Direito,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-CJA,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-Pici,active,S_Access,Extreme,Summit 450,PoP-CE,exos
+UFC-Labomar,active,S_Access,Extreme,Summit 450,PoP-CE,exos

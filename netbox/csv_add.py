@@ -1,146 +1,103 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-NetBox CSV Importer — Mini (csv_add.py)
+NetBox CSV Importer — Full (csv_add.py) — rev3
 
-Fluxo:
-  1) Vasculha a pasta por CSVs (ordem 1..7 opcional).
-  2) Deduz o endpoint do NetBox pelo nome do arquivo.
-  3) Normaliza cabeçalhos (minusculo_com_underscore).
-  4) Ajusta referências (site, tenant, vrf, role/device_type) e tipos (int).
-  5) Cria ou atualiza registros (devices: name+site; ip addresses: address+vrf).
-
-Uso:
-  python3 csv_add.py ./netbox/arquivos_csv --ip-upsert
-
-CSV mínimos de exemplo:
-
-(1) 4_devices.csv
-name,site,role,device_type,manufacturer,platform,serial
-rtr-core-01,DM-NYC,Router,MX480,Juniper,Junos,SN123
-
-(2) 6_IP_addresses.csv
-address,vrf,tenant,status,role,description
-10.0.0.1/24,VRF-CORE,Cliente A,active,loopback,IP de loopback
-
-Observações:
-- "site", "tenant", "vrf" podem ser NOME (string) ou ID.
-- "device_type" pode ser NOME do modelo; se fabricante vier, melhor.
-- Para criar um device o NetBox exige: site, role, device_type (ids ou objetos resolvidos).
-
-Este script tenta instalar automaticamente dependências ausentes (pynetbox e, se existir .env, python-dotenv).
+Mudanças chave vs rev2:
+- Suporte a circuits.circuit_terminations (7_circuit_terminations.csv)
+- Resolução de provider/type por cache (nome ou slug)
+- Cache de devices tolerante a espaço/hífen/acentos (lookup robusto)
+- circuits: aceita name/circuit_id -> cid; parse de tags; resolve provider/type
+- cables: aceita dcim.interface e circuits.circuittermination em A/B
 """
 
 from __future__ import annotations
 
-import argparse
-import csv
-import os
-import pathlib
-import re
-import sys
-import subprocess
+import argparse, csv, os, pathlib, re, sys, subprocess, unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
-# ========================= bootstrap de dependências ==========================
+# ---------------- deps ----------------
 REQUIRED_PACKAGES = ["pynetbox>=7.5.0"]
-OPTIONAL_PACKAGES = ["python-dotenv>=1.0.0"]  # só é carregado se existir .env
+OPTIONAL_PACKAGES = ["python-dotenv>=1.0.0"]
 
 def _pip_install(pkgs: List[str]) -> None:
-    """Instala pacotes via pip no mesmo intérprete."""
-    if not pkgs:
-        return
+    if not pkgs: return
     cmd = [sys.executable, "-m", "pip", "install", "--no-input", "--no-cache-dir", *pkgs]
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ERRO] Falha instalando pacotes {pkgs}: {e}", file=sys.stderr)
-        sys.exit(1)
+    subprocess.run(cmd, check=True)
 
 def _ensure_deps() -> None:
-    try:
-        import importlib.util as _iu  # noqa
-        missing = []
-        if _iu.find_spec("pynetbox") is None:
-            missing.append(REQUIRED_PACKAGES[0])
-        # dotenv só se existir .env
-        if (pathlib.Path(".env").exists() or pathlib.Path("./netbox/.env").exists()):
-            if _iu.find_spec("dotenv") is None:
-                missing.append(OPTIONAL_PACKAGES[0])
-        if missing:
-            print(f"[INFO] Instalando dependências: {', '.join(missing)}")
-            _pip_install(missing)
-    except Exception as e:
-        print(f"[ALERTA] Não foi possível verificar/instalar dependências automaticamente: {e}", file=sys.stderr)
+    import importlib.util as iu
+    missing=[]
+    if iu.find_spec("pynetbox") is None:
+        missing.append(REQUIRED_PACKAGES[0])
+    if pathlib.Path(".env").exists() or pathlib.Path("./netbox/.env").exists():
+        if iu.find_spec("dotenv") is None:
+            missing.append(OPTIONAL_PACKAGES[0])
+    if missing:
+        print(f"[INFO] Instalando dependências: {', '.join(missing)}")
+        _pip_install(missing)
 
 _ensure_deps()
 
-# imports após garantir dependências
 import pynetbox  # type: ignore
 from pynetbox.core.query import RequestError  # type: ignore
-
 try:
     from dotenv import load_dotenv  # type: ignore
 except Exception:
     load_dotenv = None
 
-# ============================== configuração =================================
-# Lê das variáveis de ambiente; se não houver, usa os defaults abaixo
+# ---------------- conf ----------------
 NETBOX_URL_DEFAULT   = "http://192.168.0.88:8000"
 NETBOX_TOKEN_DEFAULT = "7fa821d37d939f537349df6381e22aaff8babe22"
 
 NETBOX_URL   = os.getenv("NETBOX_URL", NETBOX_URL_DEFAULT)
 NETBOX_TOKEN = os.getenv("NETBOX_TOKEN", NETBOX_TOKEN_DEFAULT)
 
-# Se existir arquivo .env na raiz ou em ./netbox, carrega antes de fixar valores
 def _load_dotenv_if_any() -> None:
     global NETBOX_URL, NETBOX_TOKEN
     if load_dotenv:
-        for candidate in (pathlib.Path(".env"), pathlib.Path("./netbox/.env")):
-            if candidate.exists():
-                load_dotenv(dotenv_path=candidate)
+        for p in (pathlib.Path(".env"), pathlib.Path("./netbox/.env")):
+            if p.exists():
+                load_dotenv(p)
         NETBOX_URL   = os.getenv("NETBOX_URL", NETBOX_URL)
         NETBOX_TOKEN = os.getenv("NETBOX_TOKEN", NETBOX_TOKEN)
 
 _load_dotenv_if_any()
 
-# Nome do arquivo -> endpoint do NetBox
-# (o script remove prefixos numéricos como "1_", "2_" e converte para minúsculas)
+# ---------------- maps ----------------
 NAME2EP: Dict[str, str] = {
-    "manufacturers":    "dcim.manufacturers",      # 1_manufacturers.csv
-    "platforms":        "dcim.platforms",          # 2_platforms.csv
-    "device_roles":     "dcim.device_roles",       # 3_device_roles.csv
-    "device_types":     "dcim.device_types",       # 3_device_types.csv
-    "netbox_tenants":   "tenancy.tenants",         # 3_netbox_tenants.csv
-    "sites":            "dcim.sites",              # 3_sites.csv
-    "devices":          "dcim.devices",            # 4_devices.csv
-    "interfaces":       "dcim.interfaces",         # 5_interfaces.csv
-    "vrfs":             "ipam.vrfs",               # 5_VRFs.csv
-    "ip_addresses":     "ipam.ip_addresses",       # 6_IP_addresses.csv
-    "providers":        "circuits.providers",      # 6_providers.csv
-    "circuit_types":    "circuits.circuit_types",  # 6_circuit_types.csv
-    "circuits":         "circuits.circuits",       # 7_circuits.csv
-    # 8_cables.csv é ignorado automaticamente
+    "manufacturers":        "dcim.manufacturers",
+    "platforms":            "dcim.platforms",
+    "device_roles":         "dcim.device_roles",
+    "device_types":         "dcim.device_types",
+    "netbox_tenants":       "tenancy.tenants",
+    "sites":                "dcim.sites",
+    "devices":              "dcim.devices",
+    "interfaces":           "dcim.interfaces",
+    "vrfs":                 "ipam.vrfs",
+    "ip_addresses":         "ipam.ip_addresses",
+    "providers":            "circuits.providers",
+    "circuit_types":        "circuits.circuit_types",
+    "circuits":             "circuits.circuits",
+    "circuit_terminations": "circuits.circuit_terminations",
+    "cables":               "dcim.cables",
 }
 
-# Campos que são referências (aceitam id ou {"name": ...})
 REF_FIELDS: Dict[str, List[str]] = {
     "dcim.devices":       ["role", "platform", "site", "tenant", "location", "rack"],
     "dcim.platforms":     ["manufacturer"],
     "dcim.device_types":  ["manufacturer"],
-    "dcim.interfaces":    ["device", "parent"],
+    "dcim.interfaces":    ["parent"],  # device é resolvido manualmente
     "ipam.vrfs":          ["tenant"],
     "circuits.circuits":  ["provider", "type", "tenant"],
 }
 
-# Campos inteiros
 INT_FIELDS: Dict[str, List[str]] = {
     "dcim.device_types": ["u_height", "weight", "airflow"],
     "dcim.interfaces":   ["speed", "mtu"],
 }
 
-# ================================ utilitários ================================
-
+# ---------------- utils ----------------
 def norm(s: str) -> str:
     return re.sub(r"\s+", "_", s.strip().lower())
 
@@ -148,21 +105,24 @@ def is_int_str(s: Any) -> bool:
     return isinstance(s, str) and s.isdigit()
 
 def to_ref(v: Any) -> Any:
-    """Converte valor em referência aceita pelo pynetbox:
-       - int -> int (id)
-       - "123" -> 123 (id)
-       - "Nome" -> {"name": "Nome"}"""
-    if isinstance(v, int):
-        return v
-    if is_int_str(v):
-        return int(v)
-    if isinstance(v, str) and v.strip():
-        return {"name": v.strip()}
+    if isinstance(v, int): return v
+    if is_int_str(v): return int(v)
+    if isinstance(v, str) and v.strip(): return {"name": v.strip()}
     return v
+
+def _to_bool(v: Any) -> Optional[bool]:
+    if isinstance(v, bool): return v
+    if isinstance(v, str):
+        t = v.strip().lower()
+        if t in ("true","yes","1","y","on"): return True
+        if t in ("false","no","0","n","off"): return False
+    return None
 
 def clean_row(row: Dict[str, Any]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     for k, v in row.items():
+        if k is None:
+            continue
         if isinstance(v, str):
             v = v.strip()
         if v not in (None, "", "null", "None"):
@@ -174,78 +134,283 @@ def load_csv_rows(path: pathlib.Path) -> List[Dict[str, Any]]:
         r = csv.DictReader(f)
         if not r.fieldnames:
             return []
-        r.fieldnames = [norm(h) for h in r.fieldnames]
+        r.fieldnames = [norm(h) if h is not None else None for h in r.fieldnames]
         return [clean_row(x) for x in r]
 
 def dup_err_text(e: Any) -> str:
-    try:
-        return (e if isinstance(e, str) else str(e)).lower()
-    except Exception:
-        return str(e).lower()
+    try: return (e if isinstance(e, str) else str(e)).lower()
+    except Exception: return str(e).lower()
 
 def is_dup_error(e: RequestError) -> bool:
     t = dup_err_text(e.error)
-    return ("already exists" in t) or ("must be unique" in t) or ("duplicate ip address" in t)
+    tokens = (
+        "already exists",
+        "must be unique",
+        "duplicate ip address",
+        "unique constraint",
+        "violates unique",
+        "constraint",
+        "is violated",
+        "with this manufacturer and name already exists",
+        "with this manufacturer and slug already exists",
+        "with this provider and circuit id already exists",
+        "tenant_unique_name",
+        "tenant_unique_slug",
+    )
+    return any(tok in t for tok in tokens)
 
-# ============================= resoluções simples ============================
+# ---------------- normalization helpers ----------------
+def _norm_key(s: str) -> str:
+    s = str(s)
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = s.strip().lower()
+    s = s.replace("–","-").replace("—","-")
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+def _variants(name: str):
+    n = _norm_key(name)
+    yield n
+    yield n.replace(" ", "-")
+    yield n.replace("-", " ")
+    yield n.replace(" ", "")
+    yield n.replace("-", "")
+
+# ---------------- caches ----------------
+DEV_CACHE: Dict[str, int]   = {}
+MFR_CACHE: Dict[str, int]   = {}
+PROV_CACHE: Dict[str, int]  = {}
+CTYPE_CACHE: Dict[str, int] = {}
+
+def _cache_put(cache: Dict[str,int], key: Any, val: int) -> None:
+    if key is None: return
+    k = _norm_key(key)
+    cache[k] = val
+    cache[k.replace("-", " ")] = val
+    cache[k.replace(" ", "-")] = val
+    cache[k.replace(" ", "")]  = val
+    cache[k.replace("-", "")]  = val
+
+def _build_caches(nb) -> None:
+    DEV_CACHE.clear()
+    for d in nb.dcim.devices.all():
+        if getattr(d, "name", None):
+            _cache_put(DEV_CACHE, d.name, d.id)
+
+    MFR_CACHE.clear()
+    for m in nb.dcim.manufacturers.all():
+        _cache_put(MFR_CACHE, getattr(m,"name",None), m.id)
+        _cache_put(MFR_CACHE, getattr(m,"slug",None), m.id)
+
+    PROV_CACHE.clear()
+    for p in nb.circuits.providers.all():
+        _cache_put(PROV_CACHE, getattr(p,"name",None), p.id)
+        _cache_put(PROV_CACHE, getattr(p,"slug",None), p.id)
+
+    CTYPE_CACHE.clear()
+    for ct in nb.circuits.circuit_types.all():
+        _cache_put(CTYPE_CACHE, getattr(ct,"name",None), ct.id)
+        _cache_put(CTYPE_CACHE, getattr(ct,"slug",None), ct.id)
 
 def res_site_id(nb, name: str) -> Optional[int]:
-    obj = nb.dcim.sites.get(name=name)
-    return obj.id if obj else None
+    try:
+        o = nb.dcim.sites.get(name=name)
+        if o: return o.id
+    except ValueError:
+        ls = list(nb.dcim.sites.filter(name=name))
+        if ls: return ls[0].id
+    return None
 
 def res_tenant_id(nb, name: str) -> Optional[int]:
-    obj = nb.tenancy.tenants.get(name=name)
-    return obj.id if obj else None
+    try:
+        o = nb.tenancy.tenants.get(name=name)
+        if o: return o.id
+    except ValueError:
+        ls = list(nb.tenancy.tenants.filter(name=name))
+        if ls: return ls[0].id
+    return None
 
 def res_vrf_id(nb, vrf_name: str, tenant_name: Optional[str]) -> Optional[int]:
-    """Tenta VRF por (name, tenant) e depois só por name."""
     if tenant_name:
         tid = res_tenant_id(nb, tenant_name)
         if tid:
             try:
-                obj = nb.ipam.vrfs.get(name=vrf_name, tenant_id=tid)
-                if obj:
-                    return obj.id
+                o = nb.ipam.vrfs.get(name=vrf_name, tenant_id=tid)
+                if o: return o.id
             except ValueError:
-                matches = list(nb.ipam.vrfs.filter(name=vrf_name, tenant_id=tid))
-                if matches:
-                    return matches[0].id
-    # fallback: sem tenant
+                ls = list(nb.ipam.vrfs.filter(name=vrf_name, tenant_id=tid))
+                if ls: return ls[0].id
     try:
-        obj = nb.ipam.vrfs.get(name=vrf_name)
-        if obj:
-            return obj.id
+        o = nb.ipam.vrfs.get(name=vrf_name)
+        if o: return o.id
     except ValueError:
-        matches = list(nb.ipam.vrfs.filter(name=vrf_name))
-        if matches:
-            return matches[0].id
+        ls = list(nb.ipam.vrfs.filter(name=vrf_name))
+        if ls: return ls[0].id
     return None
 
-# ===================== transformação por endpoint/objeto =====================
+def _id_by(cache: Dict[str,int], value: Any) -> Optional[int]:
+    if isinstance(value, int): return value
+    if isinstance(value, str):
+        for v in _variants(value):
+            if v in cache: return cache[v]
+    if isinstance(value, dict):
+        for k in ("id","name","slug"):
+            if k in value:
+                return _id_by(cache, value[k])
+    return None
+
+def res_device_id(name: str) -> Optional[int]:
+    if not name: return None
+    for v in _variants(name):
+        if v in DEV_CACHE:
+            return DEV_CACHE[v]
+    return None
+
+def res_interface_id(nb, device_name: str, if_name: str) -> Optional[int]:
+    did = res_device_id(device_name)
+    if not did: return None
+    try:
+        o = nb.dcim.interfaces.get(device_id=did, name=str(if_name).strip())
+        if o: return o.id
+    except ValueError:
+        ls = list(nb.dcim.interfaces.filter(device_id=did, name=str(if_name).strip()))
+        if ls: return ls[0].id
+    return None
+
+def res_circuit_id(nb, cid_or_name: str) -> Optional[int]:
+    if not cid_or_name: return None
+    if is_int_str(cid_or_name):
+        try:
+            o = nb.circuits.circuits.get(int(cid_or_name))
+            if o: return o.id
+        except Exception:
+            pass
+    try:
+        o = nb.circuits.circuits.get(cid=cid_or_name)
+        if o: return o.id
+    except ValueError:
+        ls = list(nb.circuits.circuits.filter(cid=cid_or_name))
+        if ls: return ls[0].id
+    return None
+
+def res_circuit_term_id(nb, circuit_cid: str, side: str) -> Optional[int]:
+    cid = res_circuit_id(nb, circuit_cid)
+    if not cid: return None
+    s = (side or "").strip().upper()
+    if s not in ("A","Z"): return None
+    try:
+        o = nb.circuits.circuit_terminations.get(circuit_id=cid, term_side=s)
+        if o: return o.id
+    except ValueError:
+        ls = list(nb.circuits.circuit_terminations.filter(circuit_id=cid, term_side=s))
+        if ls: return ls[0].id
+    return None
+
+# ---------------- transform ----------------
+def _pop_first(d: Dict[str, Any], keys: List[str]) -> Optional[Any]:
+    for k in keys:
+        if k in d:
+            return d.pop(k)
+    return None
+
+def _parse_tags(v: Any) -> Optional[List[str]]:
+    if v is None: return None
+    if isinstance(v, list): return v
+    if isinstance(v, str):
+        parts = [x.strip() for x in v.split(",") if x.strip()]
+        return parts or None
+    return None
 
 def transform_row(nb, ep: str, r: Dict[str, Any]) -> Dict[str, Any]:
-    r = dict(r)  # cópia
+    r = dict(r)
 
-    # limpezas simples
-    for k in ("description", "comments", "tags", "label"):
-        if r.get(k) in (None, "", "null", "None"):
+    # remoção de vazios
+    for k in ("description","comments","label"):
+        if r.get(k) in (None,"","null","None"):
             r.pop(k, None)
 
-    # alias: alguns CSVs usam "device_role"
+    # aliases
     if ep == "dcim.devices" and "device_role" in r and "role" not in r:
         r["role"] = r.pop("device_role")
 
-    # converter referências
-    for k in REF_FIELDS.get(ep, []):
-        if k in r:
-            r[k] = to_ref(r[k])
+    # manufacturers em platforms/device_types via cache
+    if ep in ("dcim.platforms","dcim.device_types") and "manufacturer" in r:
+        mid = _id_by(MFR_CACHE, r["manufacturer"])
+        r["manufacturer"] = mid if mid else {"name": r["manufacturer"]}
 
-    # tipos inteiros
-    for k in INT_FIELDS.get(ep, []):
-        if k in r and is_int_str(r[k]):
-            r[k] = int(r[k])
+    # interfaces
+    if ep == "dcim.interfaces":
+        dev_val = _pop_first(r, ["device","device_name","device__name","host"])
+        if isinstance(dev_val, dict): dev_val = dev_val.get("name")
+        did = res_device_id(str(dev_val) if dev_val else "")
+        if not did:
+            raise ValueError(f"Device não encontrado para interface: {dev_val}")
+        r["device"] = did
 
-    # device_type pode vir como nome (e opcionalmente o fabricante)
+        for k in ("enabled","mark_connected","mgmt_only"):
+            if k in r:
+                bv = _to_bool(r[k])
+                if bv is None: r.pop(k, None)
+                else: r[k] = bv
+
+        if "duplex" in r and str(r["duplex"]).strip().lower() in ("true","false"):
+            r.pop("duplex", None)
+
+        for k in ("speed","mtu"):
+            if k in r:
+                s = str(r[k]).strip()
+                if s.isdigit(): r[k] = int(s)
+                else: r.pop(k, None)
+
+        if "name" in r and isinstance(r["name"], str):
+            r["name"] = r["name"].strip()
+
+    # cables
+    if ep == "dcim.cables":
+        def _side(side: str) -> Tuple[str, Optional[int]]:
+            typ = _pop_first(r,[f"side_{side}_type", f"{side}_type"]) or "dcim.interface"
+            typ = str(typ).strip().lower()
+            if typ not in ("dcim.interface","circuits.circuittermination"):
+                raise ValueError(f"Tipo de terminação não suportado: {typ}")
+
+            if typ == "dcim.interface":
+                dev = _pop_first(r,[f"side_{side}_device", f"{side}_device"])
+                nam = _pop_first(r,[f"side_{side}_name", f"{side}_name", f"{side}_interface"])
+                if not (dev and nam):
+                    raise ValueError(f"Faltam campos para interface do lado {side.upper()}")
+                iid = res_interface_id(nb, str(dev), str(nam))
+                if not iid:
+                    raise ValueError(f"Interface não encontrada: {dev} {nam}")
+                return "dcim.interface", iid
+
+            # circuits.circuittermination
+            circ = _pop_first(r,[f"side_{side}_circuit", f"{side}_circuit"])
+            sidx = _pop_first(r,[f"side_{side}_side", f"{side}_side"])
+            if not (circ and sidx):
+                raise ValueError(f"Faltam campos de circuito/side no lado {side.upper()} (ex.: {side}_circuit, {side}_side)")
+            tid = res_circuit_term_id(nb, str(circ), str(sidx))
+            if not tid:
+                raise ValueError(f"CircuitTermination não encontrado: {circ} {sidx}")
+            return "circuits.circuittermination", tid
+
+        a_typ, a_id = _side("a")
+        b_typ, b_id = _side("b")
+
+        # NetBox v4+: usar a_/b_terminations
+        r["a_terminations"] = [{"object_type": a_typ, "object_id": a_id}]
+        r["b_terminations"] = [{"object_type": b_typ, "object_id": b_id}]
+
+        # limpar chaves antigas se vieram no CSV
+        for k in ("termination_a_type","termination_a_id","termination_b_type","termination_b_id"):
+            r.pop(k, None)
+
+        if "tags" in r:
+            tv = _parse_tags(r["tags"])
+            if tv is None: r.pop("tags", None)
+            else: r["tags"] = tv
+
+    # devices: device_type pode vir como nome
     if ep == "dcim.devices" and "device_type" in r:
         model = r.pop("device_type")
         manuf = r.get("manufacturer") or r.get("device_manufacturer")
@@ -254,7 +419,38 @@ def transform_row(nb, ep: str, r: Dict[str, Any]) -> Dict[str, Any]:
             else ({"model": model, "manufacturer": to_ref(manuf)} if manuf else {"model": model})
         )
 
-    # ip addresses: resolver VRF e tenant por nome
+    # circuits: aceitar name/circuit_id -> cid; tags; provider/type por cache
+    if ep == "circuits.circuits":
+        if "cid" not in r:
+            alt = _pop_first(r, ["name","circuit_id","circuitid","circuit"])
+            if alt: r["cid"] = alt
+        prov_val = _pop_first(r, ["provider","provider_name","provider__name","provider_slug","provider__slug"])
+        if prov_val is not None:
+            pid = _id_by(PROV_CACHE, prov_val)
+            r["provider"] = pid if pid is not None else {"name": prov_val}
+        typ_val = _pop_first(r, ["type","circuit_type","type_name","type__name","type_slug","type__slug"])
+        if typ_val is not None:
+            tid = _id_by(CTYPE_CACHE, typ_val)
+            r["type"] = tid if tid is not None else {"name": typ_val}
+        if "tags" in r:
+            tv = _parse_tags(r["tags"])
+            if tv is None: r.pop("tags", None)
+            else: r["tags"] = tv
+
+    # circuit terminations: circuit por cid; term_side upper; site por nome
+    if ep == "circuits.circuit_terminations":
+        cval = _pop_first(r, ["circuit","cid","circuit_id"])
+        cid = res_circuit_id(nb, str(cval) if cval else "")
+        if not cid:
+            raise ValueError(f"Circuito não encontrado (cid/name): {cval}")
+        r["circuit"] = cid
+        if "term_side" in r:
+            r["term_side"] = str(r["term_side"]).strip().upper()
+        if "site" in r and isinstance(r["site"], str):
+            sid = res_site_id(nb, r["site"])
+            if sid: r["site"] = sid
+
+    # ip addresses: resolver VRF e tenant
     if ep == "ipam.ip_addresses":
         ten = r.get("tenant")
         ten_name = (ten.get("name") if isinstance(ten, dict) else ten) if ten else None
@@ -264,12 +460,18 @@ def transform_row(nb, ep: str, r: Dict[str, Any]) -> Dict[str, Any]:
         if ten_name:
             r["tenant"] = to_ref(ten_name)
 
+    # refs/ints genéricos
+    for k in REF_FIELDS.get(ep, []):
+        if k in r:
+            r[k] = to_ref(r[k])
+    for k in INT_FIELDS.get(ep, []):
+        if k in r and is_int_str(r[k]):
+            r[k] = int(r[k])
+
     return r
 
-# ======================== operações (create / update) ========================
-
+# ---------------- upserts ----------------
 def upsert_device(nb, row: Dict[str, Any]) -> str:
-    """Devices: match por (name + site). Se existir → update parcial; senão → create."""
     name = row.get("name")
     site = row.get("site")
     sname = site.get("name") if isinstance(site, dict) else site
@@ -280,23 +482,43 @@ def upsert_device(nb, row: Dict[str, Any]) -> str:
     if not sid:
         nb.dcim.devices.create(row); return "created"
 
-    ex = nb.dcim.devices.get(name=name, site_id=sid)
+    try:
+        ex = nb.dcim.devices.get(name=name, site_id=sid)
+    except ValueError:
+        lst = list(nb.dcim.devices.filter(name=name, site_id=sid))
+        ex = lst[0] if lst else None
+
     if ex:
         payload = {k: v for k, v in row.items() if k not in ("name", "site")}
-        if not payload:
-            return "skipped"
+        if not payload: return "skipped"
         try:
             ex.update(payload); return "updated"
         except RequestError as e:
             return "skipped" if is_dup_error(e) else "error"
     nb.dcim.devices.create(row); return "created"
 
+def upsert_interface(nb, row: Dict[str, Any]) -> str:
+    did = row.get("device") if isinstance(row.get("device"), int) else None
+    name = str(row.get("name") or "").strip()
+    if did and name:
+        try:
+            ex = nb.dcim.interfaces.get(device_id=did, name=name)
+        except ValueError:
+            lst = list(nb.dcim.interfaces.filter(device_id=did, name=name))
+            ex = lst[0] if lst else None
+        if ex:
+            payload = {k: v for k, v in row.items() if k not in ("device", "name")}
+            if not payload: return "skipped"
+            try:
+                ex.update(payload); return "updated"
+            except RequestError as e:
+                return "skipped" if is_dup_error(e) else "error"
+    nb.dcim.interfaces.create(row); return "created"
+
 def upsert_ip(endpoint, row: Dict[str, Any]) -> str:
-    """IPs: match por address (+ vrf_id se houver). Atualiza campos comuns."""
     addr = row.get("address")
     vrf_id = row.get("vrf") if isinstance(row.get("vrf"), int) else None
-    if not addr:
-        return "skipped"
+    if not addr: return "skipped"
 
     try:
         ex = endpoint.get(address=addr, vrf_id=vrf_id) if vrf_id else endpoint.get(address=addr)
@@ -305,7 +527,7 @@ def upsert_ip(endpoint, row: Dict[str, Any]) -> str:
         ex = lst[0] if lst else None
 
     if ex:
-        payload_keys = ("status", "role", "tenant", "description", "dns_name", "nat_inside", "nat_outside")
+        payload_keys = ("status","role","tenant","description","dns_name","nat_inside","nat_outside","tags")
         payload = {k: row[k] for k in payload_keys if k in row}
         if payload:
             try:
@@ -319,30 +541,19 @@ def upsert_ip(endpoint, row: Dict[str, Any]) -> str:
     except RequestError as e:
         return "skipped" if is_dup_error(e) else "error"
 
-# ======================= descoberta de CSVs e roteamento ======================
-
+# ---------------- routing ----------------
 def detect_endpoint(relname: str) -> Optional[str]:
-    """
-    Regras:
-      - remove prefixo numérico (ex.: '1_devices.csv' -> 'devices')
-      - troca hífen por underscore e tira a extensão
-    """
     base = pathlib.Path(relname).name.lower()
-    base = re.sub(r"^\d+_", "", base)
-    base = base.replace("-", "_")
+    base = re.sub(r"^\d+_", "", base).replace("-", "_")
     key  = base.replace(".csv", "")
     return NAME2EP.get(key)
 
 def collect_csvs(base: pathlib.Path) -> List[Tuple[int, str, pathlib.Path]]:
-    """Retorna [(ordem, relativo, caminho)] ignorando 'cables'."""
-    items: List[Tuple[int, str, pathlib.Path]] = []
+    items=[]
     for p in base.rglob("*.csv"):
-        nl = p.name.lower()
-        if "cables" in nl:  # ignorar cabos neste importador
-            continue
         rel = p.relative_to(base).as_posix()
         m = re.match(r"^(\d+)_", p.name)
-        order = int(m.group(1)) if m and 1 <= int(m.group(1)) <= 7 else 9999
+        order = int(m.group(1)) if m and 1 <= int(m.group(1)) <= 8 else 9999
         items.append((order, rel, p))
     items.sort(key=lambda x: (x[0], x[1]))
     return items
@@ -351,9 +562,8 @@ def get_endpoint_object(nb, ep_path: str):
     mod, attr = ep_path.split(".", 1)
     return getattr(getattr(nb, mod), attr)
 
-# ================================= execução ==================================
-
-def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tuple[int, int, int, int]:
+# ---------------- exec ----------------
+def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tuple[int,int,int,int]:
     endpoint = get_endpoint_object(nb, ep)
     created = updated = skipped = errors = 0
 
@@ -361,13 +571,17 @@ def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tu
         try:
             if ep == "dcim.devices":
                 res = upsert_device(nb, r)
+            elif ep == "dcim.interfaces":
+                res = upsert_interface(nb, r)
             elif ep == "ipam.ip_addresses" and ip_upsert:
                 res = upsert_ip(endpoint, r)
             else:
                 endpoint.create(r); res = "created"
         except RequestError as e:
+            print(f"   [ERRO API] {ep}: {e.error}", file=sys.stderr)
             res = "skipped" if is_dup_error(e) else "error"
-        except Exception:
+        except Exception as e:
+            print(f"   [ERRO] {ep}: {e}", file=sys.stderr)
             res = "error"
 
         if   res == "created": created += 1
@@ -377,14 +591,23 @@ def process_file(nb, ep: str, rows: List[Dict[str, Any]], ip_upsert: bool) -> Tu
 
     return created, updated, skipped, errors
 
+def _check_conn_or_exit(nb) -> None:
+    try:
+        _ = nb.dcim.sites.count()
+    except Exception as e:
+        print(f"[ERRO] Falha ao conectar no NetBox ({NETBOX_URL}). Verifique URL/TOKEN. Detalhes: {e}", file=sys.stderr)
+        sys.exit(2)
+
 def run(nb, base: pathlib.Path, ip_upsert: bool) -> None:
+    _build_caches(nb)
+
     items = collect_csvs(base)
     if not items:
         print("Nenhum CSV encontrado."); return
 
     current_header = None
     for order, rel, path in items:
-        header = "PRIORIDADE (1..7)" if order != 9999 else "OUTROS"
+        header = "PRIORIDADE (1..8)" if order != 9999 else "OUTROS"
         if header != current_header:
             current_header = header
             print(f"\n=== {header} ===")
@@ -396,7 +619,13 @@ def run(nb, base: pathlib.Path, ip_upsert: bool) -> None:
 
         print(f"[{order}] {rel} → {ep}")
         raw_rows = load_csv_rows(path)
-        rows = [transform_row(nb, ep, r) for r in raw_rows]
+
+        rows: List[Dict[str, Any]] = []
+        for idx, rr in enumerate(raw_rows, start=1):
+            try:
+                rows.append(transform_row(nb, ep, rr))
+            except Exception as e:
+                print(f"   [ERRO] transform {ep} linha {idx}: {e}", file=sys.stderr)
 
         print(f" - POST {ep}: {len(rows)} registros")
         c,u,s,e = process_file(nb, ep, rows, ip_upsert)
@@ -406,17 +635,8 @@ def run(nb, base: pathlib.Path, ip_upsert: bool) -> None:
         if e: tail += f" erros={e}"
         print(f"   → {tail}")
 
-def _check_conn_or_exit(nb) -> None:
-    """Valida conexão/permite erro claro antes de processar."""
-    try:
-        # chamada leve para validar token/URL
-        _ = nb.dcim.sites.count()
-    except Exception as e:
-        print(f"[ERRO] Falha ao conectar no NetBox ({NETBOX_URL}). Verifique URL/TOKEN. Detalhes: {e}", file=sys.stderr)
-        sys.exit(2)
-
 def main() -> None:
-    ap = argparse.ArgumentParser(description="NetBox CSV Importer — Mini")
+    ap = argparse.ArgumentParser(description="NetBox CSV Importer — Full rev3")
     ap.add_argument("base_dir", help="Pasta com os CSVs (ex.: ./netbox/arquivos_csv)")
     ap.add_argument("--ip-upsert", action="store_true", help="Atualiza IPs existentes (address [+ vrf])")
     args = ap.parse_args()

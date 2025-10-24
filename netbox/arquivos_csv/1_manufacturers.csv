@@ -1,2 +1,25 @@
 name,slug
 Juniper,juniper
+Extreme,exos
+Cisco,cisco
+Arista,arista
+Huawei,huawei
+Dell,dell
+MikroTik,mikrotik
+Ubiquiti,ubiquiti
+Fortinet,fortinet
+Palo Alto Networks,palo-alto-networks
+TP-Link,tp-link
+Netgear,netgear
+HP,hp
+Lenovo,lenovo
+Zyxel,zyxel
+Mellanox,mellanox
+F5 Networks,f5-networks
+Alcatel-Lucent,alcatel-lucent
+Aruba,aruba
+Nokia,nokia
+Brocade,brocade
+ZTE,zte
+Datacom,datacom
+RNP,rnp

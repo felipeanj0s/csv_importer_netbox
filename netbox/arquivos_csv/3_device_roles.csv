@@ -1,2 +1,8 @@
-name,color,vm_role,description,slug
-Core,2f6a31,False,Roteadores do Backbone,core
+name,slug,color,vm_role,description
+Router,router,ff0000,False,Equipamento de roteamento principal
+Switch,switch,0000ff,False,Switch de acesso ou distribuição
+Firewall,firewall,ff9900,False,Equipamento de segurança perimetral
+Servidor,server,009900,False,Servidor de aplicação ou serviço
+Storage,storage,6600cc,False,Equipamento de armazenamento
+CPE,cpe,993333,False,Equipamento do cliente (CPE)
+ONU,onu,cccc00,False,Terminal óptico de usuário

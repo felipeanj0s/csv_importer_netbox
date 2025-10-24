@@ -1,4 +1,20 @@
 name,status,slug,latitude,longitude
-PA-PB,active,pa-pb,-7.146433,-34.963998
-PoP-PB,active,pop-pb,-7.242745,-35.979504
-PoP-PE,active,pop-pe,-8.043130,-35.016618
+RG02-EMBRAPA,active,rg02-embrapa,,
+RG03-UECE - Itaperi,active,rg03-uece-itaperi,,
+RG04-FUNCAP,active,rg04-funcap,,
+RG07-UNIFOR,active,rg07-unifor,,
+RG09-HGF,active,rg09-hgf,,
+RG107-UNIFOR,active,rg107-unifor,,
+RG12-FUNCEME,active,rg12-funceme,,
+RG126-IFCE - Reitoria,active,rg126-ifce-reitoria,,
+RG13-IFCE-Polo de Inovação,active,rg13-ifce-polo-de-inovacao,,
+RG15-UECE-Benfica,active,rg15-uece-benfica,,
+RG16-IFCE-Fortaleza,active,rg16-ifce-fortaleza,,
+RG21-ICC,active,rg21-icc,,
+RG24-HUWC,active,rg24-huwc,,
+RG25-MEAC,active,rg25-meac,,
+RG26-IFCE-Reitoria,active,rg26-ifce-reitoria,,
+RG27-SARAH,active,rg27-sarah,,
+RG28-ROEN,active,rg28-roen,,
+RG29-FIOCRUZ,active,rg29-fiocruz,,
+PoP-CE,active,pop-ce,,

@@ -1,4 +1,3 @@
-cid,provider,type,status,Tenant,Description
-R-301385,CHESF,DWDM,active,Backbone,PB - PE 100G CHESF
-O-40332578,MOB,DWDM,active,Backbone,PB - PB 100G MOB
-O-40414995,WIRELINK,DWDM,active,Backbone,PB - PE 10G WIRELINK
+cid,provider,type,status,tenant,description,tags
+RG02-EMBRAPA,RNP,MetroEthernet,active,,Ligação RNP-CE ↔ RG02-EMBRAPA,
+RG03-UECE-ITAPERI,RNP,MetroEthernet,active,,Ligação RNP-CE ↔ RG03-UECE - Itaperi,
