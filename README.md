@@ -98,8 +98,8 @@ csv_importer_netbox/
 ## 🌍 Variáveis de ambiente
 
 Usadas por ambos os scripts:
-
 ```bash
+
 cd csv_importer_netbox
 python3 -m venv .venv
 source .venv/bin/activate
@@ -107,10 +107,10 @@ pip install -r requirements.txt
 
 export NETBOX_URL="http://SEU_IP_NETBOX:8000"
 export NETBOX_TOKEN="SEU_TOKEN"
+```
 
 Também podem estar em `.env` (na raiz ou dentro de `netbox/`).
 
----
 
 
 ### 1. Importar CSVs → NetBox
