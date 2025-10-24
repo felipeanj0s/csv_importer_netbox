@@ -100,9 +100,13 @@ csv_importer_netbox/
 Usadas por ambos os scripts:
 
 ```bash
-NETBOX_URL=http://192.168.0.88:8000
-NETBOX_TOKEN=<seu_token_api>
-```
+cd csv_importer_netbox
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+export NETBOX_URL="http://SEU_IP_NETBOX:8000"
+export NETBOX_TOKEN="SEU_TOKEN"
 
 Também podem estar em `.env` (na raiz ou dentro de `netbox/`).
 
