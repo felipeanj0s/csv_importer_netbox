@@ -110,6 +110,11 @@ Também podem estar em `.env` (na raiz ou dentro de `netbox/`).
 
 ## 🚀 Como executar
 
+```bash
+source venv/bin/activate
+```
+
+
 ### 1. Importar CSVs → NetBox
 
 ```bash
