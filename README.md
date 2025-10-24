@@ -1,5 +1,5 @@
 
-# csv_importer_netbox — Importador e Exportador CSV para NetBox (Docker-friendly)
+# csv_importer_netbox — Importador e Exportador CSV para NetBox
 
 Ferramenta prática para **importar e exportar objetos do NetBox** a partir de arquivos CSV, utilizando a biblioteca `pynetbox`.
 Projetada para execução em **ambientes Docker** (isolados e reproduzíveis) ou em **Python local**.
